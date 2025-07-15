@@ -17,63 +17,54 @@ class VintedScraper(VintedWrapper):
         agent: Optional[str] = None,
         session_cookie: Optional[str] = None,
         proxies: Optional[Dict[str, str]] = None,
-        use_logger: bool = False
     ):
         """
-        :param baseurl: (required) Base Vinted site URL to use in the requests.
-        :param cookie_prefix: (optional) Prefix for the session cookie.
-        :param agent: (optional) User agent to use for the requests.
-        :param session_cookie: (optional) Vinted session cookie.
+        :param baseurl: (required) Base Vinted site url to use in the requests
+        :param agent: (optional) User agent to use on the requests
+        :param session_cookie: (optional) Vinted session cookie
         :param proxies: (optional) Dictionary mapping protocol or protocol and
-        hostname to the URL of the proxy.
-        :param use_logger: (optional) Boolean to enable/disable logging.
+        hostname to the URL of the proxy. For more info see:
+        https://requests.readthedocs.io/en/latest/user/advanced/#proxies
         """
-        super().__init__(baseurl, cookie_prefix, 4, agent, session_cookie, proxies, use_logger)
-        self.use_logger = use_logger
+        super().__init__(baseurl, cookie_prefix, agent, session_cookie, proxies)
 
-    def _log(self, level: str, message: str):
-        """Log a message only if logging is enabled."""
-        if self.use_logger:
-            getattr(logger, level)(message)
-
-    def search(self, params: Optional[Dict] = None, page_limit: int = 5) -> List[VintedItem]: # type: ignore
+    def search(self, params: Optional[Dict] = None, page_limit = 5) -> List[VintedItem]:  # type: ignore
         """
         Search for items on Vinted.
 
-        :param params: Optional dictionary with query parameters for the request.
-            Vinted supports a search without any parameters, but for targeted searches,
-            you should use parameters like 'search_text'.
-        :param page_limit: Maximum number of pages to fetch (default is 5).
+        :param params: an optional Dictionary with all the query parameters to append to the request.
+            Vinted supports a search without any parameters, but to perform a search,
+            you should add the `search_text` parameter.
+            Default value: None.
         :return: A list of VintedItem instances representing search results.
         """
         try:
-            items = super().search(params, page_limit)["all_items"]
-            return [VintedItem(item) for item in items]
-        
+            return [VintedItem(item) for item in super().search(params, page_limit)["all_items"]]
+            
         except KeyError:
-            self._log('error', 'Key "items" not found in the search results. Returning an empty list.')
+            logger.error('Key "items" not found. returning an empty list.')
             return []
         
         except Exception as e:
-            self._log('error', f'Error during search: {e}. Returning an empty list.')
+            logger.error(f'{e}. Returning an empty list')
             return []
 
-    def item(self, item_id: str, params: Optional[Dict] = None) -> Optional[VintedItem]: # type: ignore
+    def item(self, item_id: str, params: Optional[Dict] = None) -> VintedItem:  # type: ignore
         """
         Retrieve details of a specific item on Vinted.
 
         :param item_id: The unique identifier of the item to retrieve.
-        :param params: Optional dictionary with additional query parameters for the request.
-        :return: A VintedItem instance representing the item's details, or None if an error occurs.
+        :param params: an optional Dictionary with all the query parameters to append to the request.
+            Default value: None.
+        :return: A VintedItem instance representing the item's details.
         """
         try:
-            item_data = super().item(item_id, params)["item"]
-            return VintedItem(item_data)
+            return VintedItem(super().item(item_id, params)["item"])
         
         except KeyError:
-            self._log('error', 'Key "item" not found in the item details. Returning None.')
-            return None
+            logger.error('Key "item" not found. returning an empty list.')
+            return []
         
         except Exception as e:
-            self._log('error', f'Error retrieving item {item_id}: {e}. Returning None.')
-            return None
+            logger.error(f'{e}. Returning an empty list')
+            return []
